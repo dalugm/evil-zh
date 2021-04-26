@@ -4,8 +4,8 @@
 * Table of Contents                                               :TOC:noexport:
 - [[#about][About]]
 - [[#variables][Variables]]
-  - [[#evil-zh-with-search-rule][evil-zh-with-search-rule]]
-  - [[#evil-zh-start-pattern][evil-zh-start-pattern]]
+  - [[#evil-zh-search-rule][evil-zh-search-rule]]
+  - [[#evil-zh-pre-char][evil-zh-pre-char]]
 - [[#setup][Setup]]
 
 * About
@@ -26,17 +26,17 @@
 
 * Variables
 
-** evil-zh-with-search-rule 
+** evil-zh-search-rule
 
-   何时启用中文搜索
+   何时启用中文搜索。
 
-   - 'custom: 自定义（当以某一字符开头时，启用中文搜索，默认值）
-   - 'always: 总是启用中文搜索
-   - 'never: 不启用中文搜索
+   - 'custom: 自定义。（当以某一字符开头时，启用中文搜索，*默认值*。）
+   - 'always: 总是启用。
+   - 'never: 总不启用。
 
-** evil-zh-start-pattern
-   
-   自定义搜索时的起始符号
+** evil-zh-pre-char
+
+   自定义搜索时的起始字符，默认值为 ~:~。
 
 * Setup
 
@@ -45,8 +45,8 @@
   (require 'evil-zh)
 
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (setq evil-zh-with-search-rule 'custom)
-  (setq evil-zh-start-pattern ":")
+  (setq evil-zh-search-rule 'custom)
+  (setq evil-zh-pre-char ":")
 
   (global-evil-zh-mode)
 #+END_SRC

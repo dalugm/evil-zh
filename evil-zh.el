@@ -1,10 +1,8 @@
 ;;; evil-zh.el --- Evil search Chinese characters -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021 dalu
-
 ;; Author: dalu <mou.tong@qq.com>
 ;; Maintainer: dalu <mou.tong@qq.com>
-;; Version: 0.1
+;; Version: 0.1.0
 ;; Package-Requires: ((emacs "25") (evil "1"))
 ;; Homepage: https://github.com/dalugm/evil-zh
 ;; Keywords: Chinese, location
@@ -34,16 +32,25 @@
 (require 'evil)
 (require 'zh-lib)
 
-(defvar evil-zh-with-search-rule 'custom
+(defgroup evil-zh nil
+  "Search Zhongwen when searching with evil."
+  :group 'evil)
+
+(defcustom evil-zh-search-rule 'custom
   "Enable the /search/ feature.
 
 Possible values:
 - 'always: always enable zhongwen search.
 - 'never: never enable zhongwen search.
-- 'custom: enable zhongwen search when pattern started with, default `:'.")
+- 'custom: enable zhongwen search with a pre-char, default `:'."
+  :type 'symbol
+  :group 'evil-zh)
 
-(defvar evil-zh-start-pattern ":"
-  "`evil-zh' start pattern.")
+(defcustom evil-zh-pre-char ":"
+  "`evil-zh' prepend char.
+When searching with pre-char, `evil-zh' will to start zhongwen search."
+  :type 'string
+  :group 'evil-zh)
 
 (evil-define-motion find-char (count char)
   "Move to the next COUNT'th occurrence of CHAR."
@@ -54,17 +61,16 @@ Possible values:
     (setq evil-last-find (list #'find-char char fwd))
     (when fwd (forward-char))
     (let ((case-fold-search nil))
-      (unless
-        (prog1
-          (search-forward-regexp
-            (zh-lib-build-regexp char)
-            (unless evil-cross-lines
-              (if fwd
-                  (line-end-position)
-                (line-beginning-position)))
-            t count)
-          (when fwd (backward-char)))
-        (user-error "Can't find %c" char)))))
+      (unless (prog1
+                (search-forward-regexp
+                  (zh-lib-build-regexp char)
+                  (unless evil-cross-lines
+                    (if fwd
+                        (line-end-position)
+                      (line-beginning-position)))
+                  t count)
+                (when fwd (backward-char)))
+        (user-error "Can't find %c!" char)))))
 
 (evil-define-motion find-char-backward (count char)
   "Move to the previous COUNT'th occurrence of CHAR."
@@ -96,30 +102,30 @@ Possible values:
   (setq count (or count 1))
   (if evil-last-find
       (let ((cmd (car evil-last-find))
-             (char (nth 1 evil-last-find))
-             (fwd (nth 2 evil-last-find))
-             evil-last-find)
+            (char (nth 1 evil-last-find))
+            (fwd (nth 2 evil-last-find))
+            evil-last-find)
         ;; ensure count is non-negative
         (when (< count 0)
           (setq count (- count)
-            fwd (not fwd)))
+                fwd (not fwd)))
         ;; skip next character when repeating t or T
         (and (eq cmd #'find-char-to)
-          evil-repeat-find-to-skip-next
-          (= count 1)
-          (or (and fwd (or (= (char-after (1+ (point))) char)
-                         (string-match-p
-                           (zh-lib-build-regexp char)
-                           (string (char-after (1+ (point)))))))
-            (and (not fwd) (or (= (char-before) char)
-                             (string-match-p
-                               (zh-lib-build-regexp char)
-                               (string (char-before))))))
-          (setq count (1+ count)))
+             evil-repeat-find-to-skip-next
+             (= count 1)
+             (or (and fwd (or (= (char-after (1+ (point))) char)
+                              (string-match-p
+                                (zh-lib-build-regexp char)
+                                (string (char-after (1+ (point)))))))
+                 (and (not fwd) (or (= (char-before) char)
+                                    (string-match-p
+                                      (zh-lib-build-regexp char)
+                                      (string (char-before))))))
+             (setq count (1+ count)))
         (funcall cmd (if fwd count (- count)) char)
         (unless (nth 2 evil-last-find)
           (setq evil-this-type 'exclusive)))
-    (user-error "No previous search")))
+    (user-error "No previous search!")))
 
 (evil-define-motion repeat-find-char-reverse (count)
   "Repeat the last find COUNT times in the opposite direction."
@@ -130,8 +136,8 @@ Possible values:
 (define-minor-mode evil-zh-mode
   "Evil search Chinese characters by zhongwen."
   :init-value nil
-  (advice-add 'evil-ex-pattern-regex :around
-    #'evil-ex-pattern-regex-advice)
+  (advice-add 'evil-ex-pattern-regex
+              :around #'evil-ex-pattern-regex-advice)
   (if (and evil-zh-mode evil-motion-state-local-map)
       (progn
         (define-key evil-motion-state-local-map
@@ -167,22 +173,23 @@ Possible values:
         [remap evil-repeat-find-char-reverse] nil))))
 
 (defun evil-ex-pattern-regex-advice (fn &rest args)
-  "Advice for FN `evil-ex-pattern-regex' with ARGS args."
+  "Advice for FN `evil-ex-pattern-regex' with ARGS."
   (let ((re (apply fn args)))
     (if (and evil-zh-mode re evil-zh-mode
-          (cond (; always
-                  (eq evil-zh-with-search-rule 'always) t)
-            (; never
-              (eq evil-zh-with-search-rule 'never) nil)
-            (; custom
-              (eq evil-zh-with-search-rule 'custom)
-              (and re (= (string-to-char re) (string-to-char evil-zh-start-pattern)))))
+          (cond
+            ((eq evil-zh-search-rule 'always) t)  ; always
+            ((eq evil-zh-search-rule 'never) nil) ; never
+            ((eq evil-zh-search-rule 'custom)     ; custom
+              (and re (= (string-to-char re)
+                         (string-to-char evil-zh-pre-char)))))
           (not (string-match-p "\[.*+?[\\$]" re)))
-        (zh-lib-build-regexp (if (eq evil-zh-with-search-rule 'custom) (substring re 1) re))
+        (zh-lib-build-regexp (if (eq evil-zh-search-rule 'custom)
+                                 (substring re 1)
+                               re))
       re)))
 
 (defun evil-ex-pattern-clear()
-  "Clear all pollutions."
+  "Clear all pollution."
   (advice-remove 'evil-ex-pattern-regex #'evil-ex-pattern-regex-advice))
 
 ;;;###autoload
