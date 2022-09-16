@@ -40,9 +40,9 @@
   "Enable the /search/ feature.
 
 Possible values:
-- 'always: always enable zhongwen search.
-- 'never: never enable zhongwen search.
-- 'custom: enable zhongwen search with a pre-char, default `:'."
+- \\='always: always enable zhongwen search.
+- \\='never: never enable zhongwen search.
+- \\='custom: enable zhongwen search with a pre-char, default `:'."
   :type 'symbol
   :group 'evil-zh)
 
