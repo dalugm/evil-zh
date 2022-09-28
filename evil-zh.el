@@ -52,51 +52,64 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
   :type 'string
   :group 'evil-zh)
 
-(evil-define-motion find-char (count char)
+(evil-define-motion evil-zh-find-char (count char)
   "Move to the next COUNT'th occurrence of CHAR."
   :type inclusive
   (interactive "<c><C>")
   (setq count (or count 1))
-  (let ((fwd (> count 0)))
-    (setq evil-last-find (list #'find-char char fwd))
-    (when fwd (forward-char))
+  (let ((fwd (> count 0))
+        (visual (and evil-respect-visual-line-mode
+                     visual-line-mode)))
+    (setq evil-last-find (list #'evil-zh-find-char char fwd))
+    (when fwd (evil-forward-char 1 evil-cross-lines))
     (let ((case-fold-search nil))
       (unless (prog1
-                (search-forward-regexp
-                  (zh-lib-build-regexp char)
-                  (unless evil-cross-lines
-                    (if fwd
-                        (line-end-position)
-                      (line-beginning-position)))
-                  t count)
+                  (search-forward-regexp
+                   (zh-lib-build-regexp char)
+                   (cond
+                    (evil-cross-lines
+                     nil)
+                    ((and fwd visual)
+                     (save-excursion
+                       (end-of-visual-line)
+                       (point)))
+                    (fwd
+                     (line-end-position))
+                    (visual
+                     (save-excursion
+                       (beginning-of-visual-line)
+                       (point)))
+                    (t
+                     (line-beginning-position)))
+                   t count)
                 (when fwd (backward-char)))
         (user-error "Can't find %c!" char)))))
 
-(evil-define-motion find-char-backward (count char)
+(evil-define-motion evil-zh-find-char-backward (count char)
   "Move to the previous COUNT'th occurrence of CHAR."
   :type exclusive
   (interactive "<c><C>")
-  (find-char (- (or count 1)) char))
+  (evil-zh-find-char (- (or count 1)) char))
 
-(evil-define-motion find-char-to (count char)
+(evil-define-motion evil-zh-find-char-to (count char)
   "Move before the next COUNT'th occurrence of CHAR."
   :type inclusive
   (interactive "<c><C>")
   (unwind-protect
-    (progn
-      (find-char count char)
-      (if (> (or count 1) 0)
-          (backward-char)
-        (forward-char)))
-    (setcar evil-last-find #'find-char-to)))
+      (progn
+        (evil-zh-find-char count char)
+        (if (> (or count 1) 0)
+            (backward-char)
+          (forward-char)))
+    (setcar evil-last-find #'evil-zh-find-char-to)))
 
-(evil-define-motion find-char-to-backward (count char)
+(evil-define-motion evil-zh-find-char-to-backward (count char)
   "Move before the previous COUNT'th occurrence of CHAR."
   :type exclusive
   (interactive "<c><C>")
-  (find-char-to (- (or count 1)) char))
+  (evil-zh-find-char-to (- (or count 1)) char))
 
-(evil-define-motion repeat-find-char (count)
+(evil-define-motion evil-zh-repeat-find-char (count)
   "Repeat the last find COUNT times."
   :type inclusive
   (setq count (or count 1))
@@ -110,93 +123,92 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
           (setq count (- count)
                 fwd (not fwd)))
         ;; skip next character when repeating t or T
-        (and (eq cmd #'find-char-to)
+        (and (eq cmd #'evil-zh-find-char-to)
              evil-repeat-find-to-skip-next
              (= count 1)
              (or (and fwd (or (= (char-after (1+ (point))) char)
                               (string-match-p
-                                (zh-lib-build-regexp char)
-                                (string (char-after (1+ (point)))))))
+                               (zh-lib-build-regexp char)
+                               (string (char-after (1+ (point)))))))
                  (and (not fwd) (or (= (char-before) char)
                                     (string-match-p
-                                      (zh-lib-build-regexp char)
-                                      (string (char-before))))))
+                                     (zh-lib-build-regexp char)
+                                     (string (char-before))))))
              (setq count (1+ count)))
         (funcall cmd (if fwd count (- count)) char)
         (unless (nth 2 evil-last-find)
           (setq evil-this-type 'exclusive)))
     (user-error "No previous search!")))
 
-(evil-define-motion repeat-find-char-reverse (count)
+(evil-define-motion evil-zh-repeat-find-char-reverse (count)
   "Repeat the last find COUNT times in the opposite direction."
   :type inclusive
-  (repeat-find-char (- (or count 1))))
+  (evil-zh-repeat-find-char (- (or count 1))))
 
-;;;###autoload
-(define-minor-mode evil-zh-mode
-  "Evil search Chinese characters by zhongwen."
-  :init-value nil
-  (advice-add 'evil-ex-pattern-regex
-              :around #'evil-ex-pattern-regex-advice)
-  (if (and evil-zh-mode evil-motion-state-local-map)
-      (progn
-        (define-key evil-motion-state-local-map
-          [remap evil-find-char]
-          #'find-char)
-        (define-key evil-motion-state-local-map
-          [remap evil-find-char-backward]
-          #'find-char-backward)
-        (define-key evil-motion-state-local-map
-          [remap evil-find-char-to]
-          #'find-char-to)
-        (define-key evil-motion-state-local-map
-          [remap evil-find-char-to-backward]
-          #'find-char-to-backward)
-        (define-key evil-motion-state-local-map
-          [remap evil-repeat-find-char]
-          #'repeat-find-char)
-        (define-key evil-motion-state-local-map
-          [remap evil-repeat-find-char-reverse]
-          #'repeat-find-char-reverse))
-    (when evil-motion-state-local-map
-      (define-key evil-motion-state-local-map
-        [remap evil-find-char] nil)
-      (define-key evil-motion-state-local-map
-        [remap evil-find-char-backward] nil)
-      (define-key evil-motion-state-local-map
-        [remap evil-find-char-to] nil)
-      (define-key evil-motion-state-local-map
-        [remap evil-find-char-to-backward] nil)
-      (define-key evil-motion-state-local-map
-        [remap evil-repeat-find-char] nil)
-      (define-key evil-motion-state-local-map
-        [remap evil-repeat-find-char-reverse] nil))))
-
-(defun evil-ex-pattern-regex-advice (fn &rest args)
+(defun evil-zh--ex-pattern-regex-advice (fn &rest args)
   "Advice for FN `evil-ex-pattern-regex' with ARGS."
   (let ((re (apply fn args)))
-    (if (and evil-zh-mode re evil-zh-mode
-          (cond
-            ((eq evil-zh-search-rule 'always) t)  ; always
-            ((eq evil-zh-search-rule 'never) nil) ; never
-            ((eq evil-zh-search-rule 'custom)     ; custom
-              (and re (= (string-to-char re)
-                         (string-to-char evil-zh-pre-char)))))
-          (not (string-match-p "\[.*+?[\\$]" re)))
+    (if (and re
+             (cond
+              ((eq evil-zh-search-rule 'always) t)  ; always
+              ((eq evil-zh-search-rule 'never) nil) ; never
+              ((eq evil-zh-search-rule 'custom)     ; custom
+               (and re (= (string-to-char re)
+                          (string-to-char evil-zh-pre-char)))))
+             (not (string-match-p "\\[.*+?[\\$]" re)))
         (zh-lib-build-regexp (if (eq evil-zh-search-rule 'custom)
                                  (substring re 1)
                                re))
       re)))
 
-(defun evil-ex-pattern-clear()
-  "Clear all pollution."
-  (advice-remove 'evil-ex-pattern-regex #'evil-ex-pattern-regex-advice))
+;;;###autoload
+(define-minor-mode evil-zh-mode
+  "Evil search Chinese characters by zhongwen."
+  :init-value nil
+  (if evil-zh-mode
+      (progn
+        (advice-add 'evil-ex-pattern-regex
+                    :around #'evil-zh--ex-pattern-regex-advice)
+        (define-key evil-motion-state-local-map
+                    [remap evil-find-char]
+                    #'evil-zh-find-char)
+        (define-key evil-motion-state-local-map
+                    [remap evil-find-char-backward]
+                    #'evil-zh-find-char-backward)
+        (define-key evil-motion-state-local-map
+                    [remap evil-find-char-to]
+                    #'evil-zh-find-char-to)
+        (define-key evil-motion-state-local-map
+                    [remap evil-find-char-to-backward]
+                    #'evil-zh-find-char-to-backward)
+        (define-key evil-motion-state-local-map
+                    [remap evil-repeat-find-char]
+                    #'evil-zh-repeat-find-char)
+        (define-key evil-motion-state-local-map
+                    [remap evil-repeat-find-char-reverse]
+                    #'evil-zh-repeat-find-char-reverse))
+    (progn
+      (advice-remove 'evil-ex-pattern-regex
+                     #'evil-zh--ex-pattern-regex-advice)
+      (define-key evil-motion-state-local-map
+                  [remap evil-find-char] nil)
+      (define-key evil-motion-state-local-map
+                  [remap evil-find-char-backward] nil)
+      (define-key evil-motion-state-local-map
+                  [remap evil-find-char-to] nil)
+      (define-key evil-motion-state-local-map
+                  [remap evil-find-char-to-backward] nil)
+      (define-key evil-motion-state-local-map
+                  [remap evil-repeat-find-char] nil)
+      (define-key evil-motion-state-local-map
+                  [remap evil-repeat-find-char-reverse] nil))))
 
 ;;;###autoload
 (define-globalized-minor-mode
   global-evil-zh-mode
   evil-zh-mode
-  evil-zh-mode)
+  evil-zh-mode
+  :group 'evil)
 
 (provide 'evil-zh)
 
