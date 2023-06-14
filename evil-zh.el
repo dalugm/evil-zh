@@ -34,7 +34,7 @@
 
 (defgroup evil-zh nil
   "Search Zhongwen when searching with evil."
-  :group 'evil)
+  :group 'evil-zh)
 
 (defcustom evil-zh-search-rule 'custom
   "Enable the /search/ feature.
@@ -46,44 +46,46 @@ Possible values:
   :type 'symbol
   :group 'evil-zh)
 
-(defcustom evil-zh-pre-char ":"
-  "`evil-zh' prepend char.
-When searching with pre-char, `evil-zh' will to start zhongwen search."
-  :type 'string
+(defcustom evil-zh-pre-char ?:
+  "The prepend char to make `evil-zh' start zhongwen search."
+  :type 'char
   :group 'evil-zh)
 
 (evil-define-motion evil-zh-find-char (count char)
-  "Move to the next COUNT'th occurrence of CHAR."
+  "Move to the next COUNT'th occurrence of CHAR.
+
+Movement is restricted to the current line unless
+`evil-cross-lines' is non-nil."
   :type inclusive
   (interactive "<c><C>")
   (setq count (or count 1))
   (let ((fwd (> count 0))
         (visual (and evil-respect-visual-line-mode
-                     visual-line-mode)))
+                     visual-line-mode))
+        case-fold-search)
     (setq evil-last-find (list #'evil-zh-find-char char fwd))
     (when fwd (evil-forward-char 1 evil-cross-lines))
-    (let ((case-fold-search nil))
-      (unless (prog1
-                  (search-forward-regexp
-                   (zh-lib-build-regexp char)
-                   (cond
-                    (evil-cross-lines
-                     nil)
-                    ((and fwd visual)
-                     (save-excursion
-                       (end-of-visual-line)
-                       (point)))
-                    (fwd
-                     (line-end-position))
-                    (visual
-                     (save-excursion
-                       (beginning-of-visual-line)
-                       (point)))
-                    (t
-                     (line-beginning-position)))
-                   t count)
-                (when fwd (backward-char)))
-        (user-error "Can't find %c!" char)))))
+    (unless (prog1
+                (search-forward-regexp
+                 (zh-lib-build-regexp char)
+                 (cond
+                  (evil-cross-lines
+                   nil)
+                  ((and fwd visual)
+                   (save-excursion
+                     (end-of-visual-line)
+                     (point)))
+                  (fwd
+                   (line-end-position))
+                  (visual
+                   (save-excursion
+                     (beginning-of-visual-line)
+                     (point)))
+                  (t
+                   (line-beginning-position)))
+                 t count)
+              (when fwd (backward-char)))
+      (user-error "Can't find `%c'" char))))
 
 (evil-define-motion evil-zh-find-char-backward (count char)
   "Move to the previous COUNT'th occurrence of CHAR."
@@ -118,11 +120,11 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
             (char (nth 1 evil-last-find))
             (fwd (nth 2 evil-last-find))
             evil-last-find)
-        ;; ensure count is non-negative
+        ;; Ensure count is non-negative.
         (when (< count 0)
           (setq count (- count)
                 fwd (not fwd)))
-        ;; skip next character when repeating t or T
+        ;; Skip next character when repeating t or T.
         (and (eq cmd #'evil-zh-find-char-to)
              evil-repeat-find-to-skip-next
              (= count 1)
@@ -138,7 +140,7 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
         (funcall cmd (if fwd count (- count)) char)
         (unless (nth 2 evil-last-find)
           (setq evil-this-type 'exclusive)))
-    (user-error "No previous search!")))
+    (user-error "No previous search")))
 
 (evil-define-motion evil-zh-repeat-find-char-reverse (count)
   "Repeat the last find COUNT times in the opposite direction."
@@ -154,8 +156,10 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
               ((eq evil-zh-search-rule 'never) nil) ; never
               ((eq evil-zh-search-rule 'custom)     ; custom
                (and re (= (string-to-char re)
-                          (string-to-char evil-zh-pre-char)))))
-             (not (string-match-p "\\[.*+?[\\$]" re)))
+                          evil-zh-pre-char))))
+             (not (string-match-p
+                   (rx "[" (+? (zero-or-more nonl)) "]" (opt "$"))
+                   re)))
         (zh-lib-build-regexp (if (eq evil-zh-search-rule 'custom)
                                  (substring re 1)
                                re))
@@ -165,6 +169,7 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
 (define-minor-mode evil-zh-mode
   "Evil search Chinese characters by zhongwen."
   :init-value nil
+  (evil-normalize-keymaps)
   (if evil-zh-mode
       (progn
         (advice-add 'evil-ex-pattern-regex
@@ -208,7 +213,7 @@ When searching with pre-char, `evil-zh' will to start zhongwen search."
   global-evil-zh-mode
   evil-zh-mode
   evil-zh-mode
-  :group 'evil)
+  :group 'evil-zh)
 
 (provide 'evil-zh)
 
