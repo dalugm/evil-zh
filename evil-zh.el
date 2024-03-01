@@ -2,7 +2,7 @@
 
 ;; Author: dalu <mou.tong@qq.com>
 ;; Maintainer: dalu <mou.tong@qq.com>
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "25") (evil "1"))
 ;; Homepage: https://github.com/dalugm/evil-zh
 ;; Keywords: Chinese, location
@@ -168,52 +168,25 @@ Movement is restricted to the current line unless
 ;;;###autoload
 (define-minor-mode evil-zh-mode
   "Evil search Chinese characters by zhongwen."
-  :init-value nil
+  :global t
   (evil-normalize-keymaps)
   (if evil-zh-mode
       (progn
-        (advice-add 'evil-ex-pattern-regex
-                    :around #'evil-zh--ex-pattern-regex-advice)
-        (define-key evil-motion-state-local-map
-                    [remap evil-find-char]
-                    #'evil-zh-find-char)
-        (define-key evil-motion-state-local-map
-                    [remap evil-find-char-backward]
-                    #'evil-zh-find-char-backward)
-        (define-key evil-motion-state-local-map
-                    [remap evil-find-char-to]
-                    #'evil-zh-find-char-to)
-        (define-key evil-motion-state-local-map
-                    [remap evil-find-char-to-backward]
-                    #'evil-zh-find-char-to-backward)
-        (define-key evil-motion-state-local-map
-                    [remap evil-repeat-find-char]
-                    #'evil-zh-repeat-find-char)
-        (define-key evil-motion-state-local-map
-                    [remap evil-repeat-find-char-reverse]
-                    #'evil-zh-repeat-find-char-reverse))
+        (advice-add 'evil-ex-pattern-regex :around #'evil-zh--ex-pattern-regex-advice)
+        (define-key evil-motion-state-map [remap evil-find-char] #'evil-zh-find-char)
+        (define-key evil-motion-state-map [remap evil-find-char-backward] #'evil-zh-find-char-backward)
+        (define-key evil-motion-state-map [remap evil-find-char-to] #'evil-zh-find-char-to)
+        (define-key evil-motion-state-map [remap evil-find-char-to-backward] #'evil-zh-find-char-to-backward)
+        (define-key evil-motion-state-map [remap evil-repeat-find-char] #'evil-zh-repeat-find-char)
+        (define-key evil-motion-state-map [remap evil-repeat-find-char-reverse] #'evil-zh-repeat-find-char-reverse))
     (progn
-      (advice-remove 'evil-ex-pattern-regex
-                     #'evil-zh--ex-pattern-regex-advice)
-      (define-key evil-motion-state-local-map
-                  [remap evil-find-char] nil)
-      (define-key evil-motion-state-local-map
-                  [remap evil-find-char-backward] nil)
-      (define-key evil-motion-state-local-map
-                  [remap evil-find-char-to] nil)
-      (define-key evil-motion-state-local-map
-                  [remap evil-find-char-to-backward] nil)
-      (define-key evil-motion-state-local-map
-                  [remap evil-repeat-find-char] nil)
-      (define-key evil-motion-state-local-map
-                  [remap evil-repeat-find-char-reverse] nil))))
-
-;;;###autoload
-(define-globalized-minor-mode
-  global-evil-zh-mode
-  evil-zh-mode
-  evil-zh-mode
-  :group 'evil-zh)
+      (advice-remove 'evil-ex-pattern-regex #'evil-zh--ex-pattern-regex-advice)
+      (define-key evil-motion-state-map [remap evil-find-char] nil)
+      (define-key evil-motion-state-map [remap evil-find-char-backward] nil)
+      (define-key evil-motion-state-map [remap evil-find-char-to] nil)
+      (define-key evil-motion-state-map [remap evil-find-char-to-backward] nil)
+      (define-key evil-motion-state-map [remap evil-repeat-find-char] nil)
+      (define-key evil-motion-state-map [remap evil-repeat-find-char-reverse] nil))))
 
 (provide 'evil-zh)
 
