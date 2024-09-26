@@ -4,7 +4,7 @@
 ;; Maintainer: dalu <mou.tong@qq.com>
 ;; Version: 0.2.0
 ;; Package-Requires: ((emacs "25") (evil "1"))
-;; Homepage: https://github.com/dalugm/evil-zh
+;; URL: https://github.com/dalugm/evil-zh
 ;; Keywords: Chinese, location
 
 ;; This file is NOT part of GNU Emacs.
