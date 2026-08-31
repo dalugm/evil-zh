@@ -3,7 +3,7 @@
 ;; Author: dalu <mou.tong@qq.com>
 ;; Maintainer: dalu <mou.tong@qq.com>
 ;; Version: 0.3.0
-;; Package-Requires: ((emacs "29.1") (evil "1.0.0") (zh-lib "0.2.0"))
+;; Package-Requires: ((emacs "30.1") (evil "1.0.0") (zh-lib "0.2.0"))
 ;; URL: https://github.com/dalugm/evil-zh
 ;; Keywords: Chinese, location
 
@@ -30,6 +30,7 @@
 ;;; Code:
 
 (require 'evil)
+(require 'subr-x)
 (require 'zh-lib)
 
 (defgroup evil-zh nil
@@ -69,7 +70,7 @@ Movement is restricted to the current line unless
     (setq evil-last-find (list #'evil-zh-find-char char fwd))
     (when fwd (evil-forward-char 1 evil-cross-lines))
     (unless (prog1
-                (search-forward-regexp
+                (re-search-forward
                  (zh-lib-build-regexp char)
                  (cond
                   (evil-cross-lines
@@ -79,13 +80,13 @@ Movement is restricted to the current line unless
                      (end-of-visual-line)
                      (point)))
                   (fwd
-                   (line-end-position))
+                   (pos-eol))
                   (visual
                    (save-excursion
                      (beginning-of-visual-line)
                      (point)))
                   (t
-                   (line-beginning-position)))
+                   (pos-bol)))
                  t count)
               (when fwd (backward-char)))
       (user-error "Can't find `%c'" char))))
@@ -157,8 +158,7 @@ Movement is restricted to the current line unless
               ((eq evil-zh-search-rule 'always) t)  ; always
               ((eq evil-zh-search-rule 'never) nil) ; never
               ((eq evil-zh-search-rule 'custom)     ; custom
-               (and re (= (string-to-char re)
-                          evil-zh-pre-char))))
+               (string-prefix-p (string evil-zh-pre-char) re)))
              (not (string-match-p
                    (rx "[" (+? (zero-or-more nonl)) "]" (opt "$"))
                    re)))

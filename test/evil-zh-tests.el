@@ -1,6 +1,7 @@
 ;;; evil-zh-tests.el --- Tests for evil-zh -*- lexical-binding: t; -*-
 
 (require 'ert)
+(require 'cl-lib)
 (require 'evil-zh)
 
 (ert-deftest evil-zh-repeat-find-char-is-safe-at-buffer-boundary ()
@@ -32,6 +33,19 @@
                    original))
     (should-not (advice-member-p #'evil-zh--ex-pattern-regex-advice
                                  'evil-ex-pattern-regex))))
+
+(ert-deftest evil-zh-custom-search-requires-prefix ()
+  (let ((evil-zh-search-rule 'custom))
+    (should-not (evil-zh--ex-pattern-regex-advice
+                 (lambda (&rest _args) nil)))
+    (should (equal (evil-zh--ex-pattern-regex-advice
+                    (lambda (&rest _args) "plain"))
+                   "plain"))
+    (let ((regexp (evil-zh--ex-pattern-regex-advice
+                   (lambda (&rest _args) ":a"))))
+      (should-not (equal regexp ":a"))
+      (should (string-match-p regexp "a"))
+      (should (string-match-p regexp "阿")))))
 
 (provide 'evil-zh-tests)
 ;;; evil-zh-tests.el ends here
